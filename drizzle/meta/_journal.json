@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1776834873335,
+      "tag": "0000_sticky_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1776835016969,
+      "tag": "0001_slow_cloak",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1776835898627,
+      "tag": "0002_married_slipstream",
+      "breakpoints": true
+    }
+  ]
 }
