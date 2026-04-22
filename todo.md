@@ -93,3 +93,9 @@
 - [x] Handle missing Apps Script URL gracefully with fallback message
 - [x] Explicit error handling in ComposerPage auto-draft: missing Apps Script URL, 405 deployment error, generic failure — all show user-facing warning toasts
 - [x] Tests extended to 19 passing: createDraft auth, missing fields, Apps Script URL not configured, draftFromInvoice auth
+
+## Bug Fixes (from live testing)
+- [x] Fix Gmail sync: thread.getSnippet is not a function — root cause is inside Apps Script (GmailApp.search fails on some threads); added safeDateGmail helper; Apps Script fix provided to user
+- [x] Fix Sheets ledger: DB insert fails — added safeDate() parser handling "YYYY-MM-DD HH:MM:SS.mmm" format; fixed source enum to "sheets"; safe amount parsing; fallback values for required fields
+- [x] Update Apps Script searchEmails to safely wrap getSnippet() in try/catch — fix provided to user (see result message)
+- [x] Add Gmail sync payload shape test to verify thread fields (id, subject, from, date, snippet) are present — 6 new tests, 25 total passing

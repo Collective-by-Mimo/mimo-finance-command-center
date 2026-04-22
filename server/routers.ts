@@ -370,8 +370,15 @@ const syncRouter = router({
         // Default query: invoice-related emails
         const query = input?.query ?? "subject:(invoice OR receipt OR payment) is:unread";
         const threads: any[] = await callAppsScript(settings.appsScriptUrl, "searchEmails", { query });
-
         let actualCreated = 0;
+        // Safe date parser: handles ISO, "YYYY-MM-DD HH:MM:SS" from Apps Script, and Date objects
+        const safeDateGmail = (val: any): Date => {
+          if (!val) return new Date();
+          if (val instanceof Date) return val;
+          const s = String(val).trim().replace(" ", "T").replace(/\.\d+$/, "");
+          const d = new Date(s);
+          return isNaN(d.getTime()) ? new Date() : d;
+        };
 
         for (const thread of threads) {
           const rawId = thread.id;
@@ -430,8 +437,8 @@ const syncRouter = router({
             description: extractedData.description ?? thread.subject,
             amount: extractedData.amount != null ? String(extractedData.amount) : undefined,
             currency: extractedData.currency ?? "AED",
-            issueDate: thread.date ? new Date(thread.date) : new Date(),
-            dueDate: extractedData.dueDate ? new Date(extractedData.dueDate) : undefined,
+            issueDate: safeDateGmail(thread.date),
+            dueDate: extractedData.dueDate ? safeDateGmail(extractedData.dueDate) : undefined,
             source: "gmail",
             rawEmailId: rawId,
             status: "sent",
@@ -488,8 +495,19 @@ const syncRouter = router({
 
       // Also pull raw invoices from the Invoices sheet
       const sheetInvoices: any[] = await callAppsScript(settings.appsScriptUrl, "getInvoices");
-
       let created = 0;
+
+      // Safe date parser: handles ISO strings, "YYYY-MM-DD HH:MM:SS.mmm" format from Apps Script, and Date objects
+      const safeDate = (val: any): Date => {
+        if (!val) return new Date();
+        if (val instanceof Date) return val;
+        const s = String(val).trim();
+        // Replace space separator with T for ISO compatibility
+        const normalized = s.replace(" ", "T").replace(/\.\d+$/, ""); // strip milliseconds
+        const d = new Date(normalized);
+        return isNaN(d.getTime()) ? new Date() : d;
+      };
+
       for (const inv of sheetInvoices) {
         // Use Invoice_ID as the dedup key
         const rawId = inv.Invoice_ID ?? inv.Invoice_No;
@@ -497,25 +515,27 @@ const syncRouter = router({
           const existing = await getInvoiceByRawEmailId(ctx.user.id, rawId);
           if (existing) continue;
         }
-
         // Map from your Apps Script schema to our DB schema
         // Apps Script fields: Invoice_ID, Invoice_No, Created_At, Client_Name, Client_Email,
         //   Title, Description, Quantity, Unit_Price, Subtotal, VAT_Amount, Total_Amount, Currency, Status
         const status = (inv.Status ?? "DRAFT").toLowerCase() as "draft" | "sent" | "paid" | "overdue" | "cancelled";
         const validStatus = ["draft", "sent", "paid", "overdue", "cancelled"].includes(status) ? status : "draft";
-
+        // Parse amount safely — Apps Script may return number or string
+        const rawAmount = inv.Total_Amount ?? inv.Subtotal ?? 0;
+        const parsedAmount = isNaN(Number(rawAmount)) ? "0" : String(Number(rawAmount));
         await createInvoice({
           userId: ctx.user.id,
-          invoiceNumber: inv.Invoice_No,
+          invoiceNumber: inv.Invoice_No ?? `SHEET-${rawId}`,
           vendor: "Mirmovsum Mirzazada", // operator is always Mimo
-          clientName: inv.Client_Name,
-          clientEmail: inv.Client_Email,
-          description: inv.Description ?? inv.Title,
-          amount: String(inv.Total_Amount ?? 0),
+          clientName: inv.Client_Name ?? "Unknown Client",
+          clientEmail: inv.Client_Email ?? undefined,
+          description: inv.Description ?? inv.Title ?? "Imported from Google Sheets",
+          amount: parsedAmount,
           currency: inv.Currency ?? "AED",
-          issueDate: inv.Created_At ? new Date(inv.Created_At) : new Date(),
-          source: "gmail", // sourced from Sheets (reusing gmail enum value for "external")
-          rawEmailId: rawId,
+          issueDate: safeDate(inv.Created_At),
+          dueDate: inv.Due_Date ? safeDate(inv.Due_Date) : undefined,
+          source: "sheets", // correctly sourced from Sheets
+          rawEmailId: rawId ? String(rawId) : undefined,
           status: validStatus,
           type: "income",
           lineItems: inv.Quantity && inv.Unit_Price ? [{
@@ -527,7 +547,6 @@ const syncRouter = router({
         });
         created++;
       }
-
       // Also sync dashboard metrics as a transaction summary
       const metrics = dashboardData?.metrics ?? [];
       const summaryMsg = metrics.map((m: any) => `${m.label}: ${m.value} ${m.currency}`).join(", ");

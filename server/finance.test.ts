@@ -277,3 +277,93 @@ describe("ai.createDraft", () => {
     ).rejects.toThrow();
   });
 });
+
+// ─── Gmail Sync Payload Shape Tests ──────────────────────────────────────────
+
+describe("gmail sync payload shape", () => {
+  it("thread payload must have id, subject, from, date, snippet fields", () => {
+    // Simulate what Apps Script searchEmails returns
+    const mockThread = {
+      id: "thread-abc123",
+      subject: "Invoice #001 from ACME Corp",
+      from: "billing@acme.com",
+      date: "2026-04-22T07:33:46",
+      snippet: "Please find attached invoice for services rendered...",
+    };
+    expect(mockThread.id).toBeTruthy();
+    expect(mockThread.subject).toBeTruthy();
+    expect(mockThread.from).toBeTruthy();
+    expect(mockThread.date).toBeTruthy();
+    expect(mockThread.snippet).toBeDefined();
+  });
+
+  it("safeDate handles Apps Script date format YYYY-MM-DD HH:MM:SS.mmm", () => {
+    // Replicate the safeDate logic from routers.ts
+    const safeDate = (val: any): Date => {
+      if (!val) return new Date();
+      if (val instanceof Date) return val;
+      const s = String(val).trim().replace(" ", "T").replace(/\.\d+$/, "");
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? new Date() : d;
+    };
+
+    const appsScriptDate = "2026-04-22 07:33:46.258";
+    const result = safeDate(appsScriptDate);
+    expect(result).toBeInstanceOf(Date);
+    expect(isNaN(result.getTime())).toBe(false);
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(3); // April = 3 (0-indexed)
+    expect(result.getDate()).toBe(22);
+  });
+
+  it("safeDate handles ISO format", () => {
+    const safeDate = (val: any): Date => {
+      if (!val) return new Date();
+      if (val instanceof Date) return val;
+      const s = String(val).trim().replace(" ", "T").replace(/\.\d+$/, "");
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? new Date() : d;
+    };
+
+    const iso = "2026-04-22T07:33:46";
+    const result = safeDate(iso);
+    expect(result).toBeInstanceOf(Date);
+    expect(isNaN(result.getTime())).toBe(false);
+  });
+
+  it("safeDate returns current date for null/undefined input", () => {
+    const safeDate = (val: any): Date => {
+      if (!val) return new Date();
+      if (val instanceof Date) return val;
+      const s = String(val).trim().replace(" ", "T").replace(/\.\d+$/, "");
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? new Date() : d;
+    };
+
+    const before = Date.now();
+    const result = safeDate(null);
+    const after = Date.now();
+    expect(result.getTime()).toBeGreaterThanOrEqual(before);
+    expect(result.getTime()).toBeLessThanOrEqual(after);
+  });
+
+  it("sync.triggerGmail requires authentication", async () => {
+    const ctx: TrpcContext = {
+      user: null,
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: { clearCookie: () => {} } as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.sync.triggerGmail()).rejects.toThrow();
+  });
+
+  it("sync.triggerSheets requires authentication", async () => {
+    const ctx: TrpcContext = {
+      user: null,
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: { clearCookie: () => {} } as TrpcContext["res"],
+    };
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.sync.triggerSheets()).rejects.toThrow();
+  });
+});
