@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
-import { ArrowLeft, Download, Edit2, Trash2, CheckCircle, Clock, AlertTriangle, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Download, Edit2, Trash2, CheckCircle, Clock, AlertTriangle, FileText, ExternalLink, Mail, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,14 +9,51 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-function formatCurrency(val: number | string | null | undefined, currency = "USD") {
+function formatCurrency(val: number | string | null | undefined, currency = "AED") {
   if (!val) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(val));
+  return new Intl.NumberFormat("en-AE", { style: "currency", currency }).format(Number(val));
 }
 
 function formatDate(d: Date | string | null | undefined) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-AE", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function buildEmailBody(inv: any, formatCurrency: Function, formatDate: Function): string {
+  const lineItems = (inv.lineItems as any[]) ?? [];
+  const lineItemsText = lineItems.length > 0
+    ? lineItems.map((li: any) =>
+        `  - ${li.description}: ${li.quantity} × ${formatCurrency(li.unitPrice, inv.currency ?? "AED")} = ${formatCurrency(li.total, inv.currency ?? "AED")}`
+      ).join("\n")
+    : `  - ${inv.description ?? "Services rendered"}: ${formatCurrency(inv.amount, inv.currency ?? "AED")}`;
+
+  return `Dear ${inv.clientName ?? "Client"},
+
+Please find below the details for Invoice ${inv.invoiceNumber ?? `#${inv.id}`}.
+
+────────────────────────────────
+INVOICE DETAILS
+────────────────────────────────
+Invoice No:   ${inv.invoiceNumber ?? `#${inv.id}`}
+Issue Date:   ${formatDate(inv.issueDate)}
+Due Date:     ${formatDate(inv.dueDate)}
+
+SERVICES:
+${lineItemsText}
+
+TOTAL AMOUNT: ${formatCurrency(inv.amount, inv.currency ?? "AED")}
+────────────────────────────────
+
+${inv.notes ? `Notes: ${inv.notes}\n\n` : ""}Please process payment by ${formatDate(inv.dueDate)}.
+
+For any queries, please contact us at contact@movsummirzazada.com or +971 58 592 9669.
+
+Thank you for your business.
+
+Best regards,
+Mirmovsum Mirzazada
+Mimo's Collective
+Dubai, UAE | www.movsummirzazada.com`;
 }
 
 export default function InvoiceDetail({ id }: { id: number }) {
@@ -25,7 +62,9 @@ export default function InvoiceDetail({ id }: { id: number }) {
   const invoice = trpc.invoice.get.useQuery({ id });
   const updateInvoice = trpc.invoice.update.useMutation();
   const deleteInvoice = trpc.invoice.delete.useMutation();
+  const createDraft = trpc.ai.createDraft.useMutation();
   const utils = trpc.useUtils();
+  const [draftSent, setDraftSent] = useState(false);
 
   const inv = invoice.data;
 
@@ -50,6 +89,44 @@ export default function InvoiceDetail({ id }: { id: number }) {
       navigate("/invoices");
     } catch {
       toast.error("Failed to delete invoice");
+    }
+  };
+
+  const handleDraftEmail = async () => {
+    if (!inv) return;
+    if (!inv.clientEmail) {
+      toast.error("No client email address on this invoice. Please add one first.");
+      return;
+    }
+    try {
+      toast.loading("Creating Gmail draft...", { id: "draft" });
+      const body = buildEmailBody(inv, formatCurrency, formatDate);
+      await createDraft.mutateAsync({
+        to: inv.clientEmail,
+        subject: `Invoice ${inv.invoiceNumber ?? `#${inv.id}`} — ${formatCurrency(inv.amount, inv.currency ?? "AED")} — Due ${formatDate(inv.dueDate)}`,
+        body,
+      });
+      toast.dismiss("draft");
+      setDraftSent(true);
+      setTimeout(() => setDraftSent(false), 5000);
+      toast.success(
+        "Gmail draft created! Open Gmail to review and send.",
+        {
+          duration: 6000,
+          action: {
+            label: "Open Gmail",
+            onClick: () => window.open("https://mail.google.com/mail/u/0/#drafts", "_blank"),
+          },
+        }
+      );
+    } catch (err: any) {
+      toast.dismiss("draft");
+      const msg = err?.message ?? "Failed to create draft";
+      if (msg.includes("Apps Script URL not configured")) {
+        toast.error("Apps Script not configured. Go to Settings to add your URL.", { duration: 5000 });
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -187,6 +264,25 @@ ${inv.notes ? `<div class="notes"><strong>Notes:</strong> ${inv.notes}</div>` : 
           </Button>
         </Link>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className={`gap-1.5 text-xs transition-colors ${
+              draftSent
+                ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                : "hover:border-primary/40 hover:text-primary"
+            }`}
+            onClick={handleDraftEmail}
+            disabled={createDraft.isPending}
+            title={inv.clientEmail ? `Draft email to ${inv.clientEmail}` : "No client email — add one to enable drafting"}
+          >
+            {createDraft.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Mail className="w-3.5 h-3.5" />
+            )}
+            {draftSent ? "Drafted!" : "Draft Email"}
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleExportPDF}>
             <Download className="w-3.5 h-3.5" />
             Export

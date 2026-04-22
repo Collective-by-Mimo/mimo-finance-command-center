@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wand2, Send, Save, Eye, RotateCcw, Sparkles, ChevronDown, ChevronUp,
-  Bot, Zap, ArrowRight, CheckCircle2, AlertCircle
+  Bot, Zap, ArrowRight, CheckCircle2, AlertCircle, Mail, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +45,8 @@ export default function ComposerPage() {
   const [showLineItems, setShowLineItems] = useState(true);
   const [mode, setMode] = useState<Mode>("local");
   const [aiHistory, setAiHistory] = useState<any[]>([]);
+  const [draftSent, setDraftSent] = useState(false);
+  const [savedInvoiceId, setSavedInvoiceId] = useState<number | null>(null);
   const [, navigate] = useLocation();
 
   // Local LLM compose (always available)
@@ -55,6 +57,8 @@ export default function ComposerPage() {
   const generateInvoice = trpc.ai.generateInvoice.useMutation();
   // Local DB save
   const createInvoice = trpc.invoice.create.useMutation();
+  // Gmail draft creation
+  const createDraft = trpc.ai.createDraft.useMutation();
   const utils = trpc.useUtils();
 
   const isPending = composeInvoice.isPending || processAi.isPending;
@@ -133,6 +137,93 @@ export default function ComposerPage() {
     }
   };
 
+  // Build professional email body from preview data
+  const buildEmailBody = (p: any): string => {
+    const lineItems = (p.lineItems as any[]) ?? [];
+    const lineItemsText = lineItems.length > 0
+      ? lineItems.map((li: any) =>
+          `  - ${li.description}: ${li.quantity} × ${formatCurrency(li.unitPrice, p.currency ?? "AED")} = ${formatCurrency(li.total, p.currency ?? "AED")}`
+        ).join("\n")
+      : `  - ${p.description ?? "Services rendered"}: ${formatCurrency(p.amount, p.currency ?? "AED")}`;
+    return `Dear ${p.clientName ?? "Client"},
+
+Please find below the details for Invoice ${p.invoiceNumber ?? ""} from Mimo's Collective.
+
+────────────────────────────────
+INVOICE DETAILS
+────────────────────────────────
+Invoice No:   ${p.invoiceNumber ?? ""}
+Issue Date:   ${formatDate(p.issueDate)}
+Due Date:     ${formatDate(p.dueDate)}
+
+SERVICES:
+${lineItemsText}
+
+TOTAL AMOUNT: ${formatCurrency(p.amount, p.currency ?? "AED")}
+────────────────────────────────
+
+${p.notes ? `Notes: ${p.notes}\n\n` : ""}Please process payment by ${formatDate(p.dueDate)}.
+
+For any queries, please contact us at contact@movsummirzazada.com or +971 58 592 9669.
+
+Thank you for your business.
+
+Best regards,
+Mirmovsum Mirzazada
+Mimo's Collective
+Dubai, UAE | www.movsummirzazada.com`;
+  };
+
+  // Auto-draft Gmail after saving (best-effort — won't block save flow)
+  const handleDraftEmail = async (p: any) => {
+    if (!p?.clientEmail) {
+      // Silently skip if no email — invoice is still saved
+      return;
+    }
+    try {
+      const body = buildEmailBody(p);
+      await createDraft.mutateAsync({
+        to: p.clientEmail,
+        subject: `Invoice ${p.invoiceNumber ?? ""} — ${formatCurrency(p.amount, p.currency ?? "AED")} — Due ${formatDate(p.dueDate)}`,
+        body,
+      });
+      setDraftSent(true);
+      setTimeout(() => setDraftSent(false), 6000);
+      toast.success("Gmail draft created — open Gmail to review and send.", {
+        duration: 7000,
+        action: {
+          label: "Open Gmail",
+          onClick: () => window.open("https://mail.google.com/mail/u/0/#drafts", "_blank"),
+        },
+      });
+    } catch (err: any) {
+      // Show a non-blocking warning — invoice was already saved successfully
+      const msg = err?.message ?? "";
+      if (msg.includes("Apps Script URL not configured") || msg.includes("not configured")) {
+        toast.warning(
+          "Invoice saved! Gmail draft skipped — Apps Script URL not set. Configure it in Settings.",
+          {
+            duration: 6000,
+            action: {
+              label: "Go to Settings",
+              onClick: () => window.location.hash = "/settings",
+            },
+          }
+        );
+      } else if (msg.includes("405") || msg.includes("not found") || msg.includes("redirect")) {
+        toast.warning(
+          "Invoice saved! Gmail draft skipped — Apps Script deployment needs \"Anyone\" access. Check Settings.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.warning(
+          `Invoice saved! Gmail draft failed: ${msg || "Unknown error"}. You can draft manually from the invoice detail page.`,
+          { duration: 5000 }
+        );
+      }
+    }
+  };
+
   // Save to Google Sheet via Apps Script + local DB
   const handleSaveToSheet = async () => {
     if (!preview?._formData) return;
@@ -152,13 +243,17 @@ export default function ComposerPage() {
       utils.invoice.list.invalidate();
       utils.invoice.kpis.invalidate();
       toast.success(`Invoice ${result.Invoice_No ?? ""} saved to Google Sheet!`);
-      if (result.localId) navigate(`/invoices/${result.localId}`);
+      // Auto-draft Gmail if client email is available
+      await handleDraftEmail(preview);
+      if (result.localId) {
+        setSavedInvoiceId(result.localId);
+        navigate(`/invoices/${result.localId}`);
+      }
     } catch (err: any) {
       toast.dismiss("save-sheet");
       toast.error(err?.message ?? "Failed to save to Google Sheet");
     }
   };
-
   // Save to local DB only
   const handleSaveLocal = async () => {
     if (!preview) return;
@@ -181,12 +276,15 @@ export default function ComposerPage() {
       });
       utils.invoice.list.invalidate();
       utils.invoice.kpis.invalidate();
+      setSavedInvoiceId(id.id);
       toast.success("Invoice saved!");
+      // Auto-draft Gmail if client email is available
+      await handleDraftEmail({ ...preview, id: id.id });
       navigate(`/invoices/${id.id}`);
     } catch {
       toast.error("Failed to save invoice");
     }
-  };
+  };;
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto pb-24 md:pb-6">
@@ -379,11 +477,23 @@ export default function ComposerPage() {
           >
             {/* Preview header */}
             <div className="flex items-center justify-between px-5 py-4 bg-primary/10 border-b border-primary/20">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Eye className="w-4 h-4 text-primary" />
                 <p className="text-sm font-semibold text-foreground">Invoice Preview</p>
                 {preview._mode === "apps_script" && (
                   <Badge variant="outline" className="text-xs border-primary/30 text-primary">Gemini</Badge>
+                )}
+                {draftSent && (
+                  <Badge variant="outline" className="text-xs border-emerald-500/40 text-emerald-400 bg-emerald-500/10 gap-1">
+                    <Mail className="w-3 h-3" />
+                    Gmail Draft Created
+                  </Badge>
+                )}
+                {createDraft.isPending && (
+                  <Badge variant="outline" className="text-xs border-primary/30 text-primary gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Drafting email...
+                  </Badge>
                 )}
               </div>
               <div className="flex gap-2">
@@ -393,7 +503,7 @@ export default function ComposerPage() {
                     variant="outline"
                     className="gap-1.5 text-xs"
                     onClick={handleSaveToSheet}
-                    disabled={generateInvoice.isPending}
+                    disabled={generateInvoice.isPending || createDraft.isPending}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {generateInvoice.isPending ? "Saving..." : "Save to Sheet"}
@@ -403,10 +513,14 @@ export default function ComposerPage() {
                   size="sm"
                   className="gap-1.5 text-xs"
                   onClick={handleSaveLocal}
-                  disabled={createInvoice.isPending}
+                  disabled={createInvoice.isPending || createDraft.isPending}
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  {createInvoice.isPending ? "Saving..." : "Save Invoice"}
+                  {createInvoice.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  {createInvoice.isPending ? "Saving..." : createDraft.isPending ? "Drafting email..." : "Save Invoice"}
                 </Button>
               </div>
             </div>

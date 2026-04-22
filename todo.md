@@ -84,3 +84,12 @@
 - [x] Proper error messages for deployment access issues (405, auth redirect)
 - [x] AED as default currency throughout (matching Mimo's Config.gs)
 - [x] Service categories from Config.gs shown in Composer as clickable badges
+
+## Gmail Auto-Draft Feature
+- [x] Auto-draft Gmail after invoice generation in Composer (calls createDraft action)
+- [x] "Draft Email" button on Invoice Detail page for any existing invoice
+- [x] Professional email body template with invoice details (number, client, amount, due date, line items)
+- [x] Draft confirmation toast with link to Gmail
+- [x] Handle missing Apps Script URL gracefully with fallback message
+- [x] Explicit error handling in ComposerPage auto-draft: missing Apps Script URL, 405 deployment error, generic failure — all show user-facing warning toasts
+- [x] Tests extended to 19 passing: createDraft auth, missing fields, Apps Script URL not configured, draftFromInvoice auth
