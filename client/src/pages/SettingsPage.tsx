@@ -14,16 +14,20 @@ export default function SettingsPage() {
   const updateSettings = trpc.settings.update.useMutation();
   const utils = trpc.useUtils();
 
-  const [appsScriptUrl, setAppsScriptUrl] = useState("");
-  const [sheetsId, setSheetsId] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState("USD");
+  // Pre-fill with Mimo's known Apps Script URL and Sheets ID
+  const MIMO_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJPhWh7EPf1Ev7E3yC2-FCE_44fKg0IFKs2WZuawZDz43XtXuRwr92McPN63hk8y1v/exec";
+  const MIMO_SHEETS_ID = "1h3zdDE6BJOEyaQTh92gM82tr03t9AgjY6-vrh06U3wI";
+
+  const [appsScriptUrl, setAppsScriptUrl] = useState(MIMO_APPS_SCRIPT_URL);
+  const [sheetsId, setSheetsId] = useState(MIMO_SHEETS_ID);
+  const [defaultCurrency, setDefaultCurrency] = useState("AED");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (settings.data) {
-      setAppsScriptUrl(settings.data.appsScriptUrl ?? "");
-      setSheetsId(settings.data.sheetsId ?? "");
-      setDefaultCurrency(settings.data.defaultCurrency ?? "USD");
+      setAppsScriptUrl(settings.data.appsScriptUrl ?? MIMO_APPS_SCRIPT_URL);
+      setSheetsId(settings.data.sheetsId ?? MIMO_SHEETS_ID);
+      setDefaultCurrency(settings.data.defaultCurrency ?? "AED");
     }
   }, [settings.data]);
 
@@ -84,7 +88,7 @@ export default function SettingsPage() {
         className="bg-card border border-border rounded-xl p-5 mb-4"
       >
         <h2 className="text-sm font-semibold text-foreground mb-1">Google Integration</h2>
-        <p className="text-xs text-muted-foreground mb-4">Connect Gmail and Google Sheets via Apps Script</p>
+        <p className="text-xs text-muted-foreground mb-4">Connected to your Gemini-powered Apps Script backend</p>
 
         {/* Apps Script setup guide */}
         <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg mb-4">
@@ -93,10 +97,10 @@ export default function SettingsPage() {
             <div>
               <p className="text-xs font-medium text-primary mb-1">Setup Instructions</p>
               <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Open Google Apps Script (script.google.com)</li>
-                <li>Create a new project and paste the integration script</li>
-                <li>Deploy as a Web App (Execute as: Me, Access: Anyone)</li>
-                <li>Copy the deployment URL and paste it below</li>
+                <li>Your Apps Script is already deployed and pre-filled below</li>
+                <li>Ensure deployment access is <strong className="text-foreground">Anyone (even anonymous)</strong></li>
+                <li>Script ID: <span className="font-mono text-primary/80">1S_BAXiAvHH_-DbzjPR4xBBWDADTBd74rYipdeLS9doq...</span></li>
+                <li>GCP Project: <span className="font-mono text-primary/80">financecommand-1b968</span></li>
               </ol>
               <a
                 href="https://script.google.com"
@@ -119,6 +123,7 @@ export default function SettingsPage() {
               value={appsScriptUrl}
               onChange={(e) => setAppsScriptUrl(e.target.value)}
               placeholder="https://script.google.com/macros/s/.../exec"
+              autoComplete="off"
               className="bg-secondary/50 border-border/50 text-sm font-mono"
             />
             <p className="text-xs text-muted-foreground/60 mt-1">
@@ -133,7 +138,7 @@ export default function SettingsPage() {
             <Input
               value={sheetsId}
               onChange={(e) => setSheetsId(e.target.value)}
-              placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+              placeholder="1h3zdDE6BJOEyaQTh92gM82tr03t9AgjY6-vrh06U3wI"
               className="bg-secondary/50 border-border/50 text-sm font-mono"
             />
             <p className="text-xs text-muted-foreground/60 mt-1">

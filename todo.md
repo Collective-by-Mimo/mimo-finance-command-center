@@ -72,3 +72,15 @@
 - [x] Vitest tests: ai router auth guards (1 test)
 - [x] Vitest tests: input validation (3 tests)
 - [x] Total: 14 tests passing
+
+## Apps Script API Integration (Phase 2)
+- [x] Wire Apps Script exact API contract (callAppsScript helper)
+- [x] Map all 8 actions: getDashboard, getInvoices, processAi, generateInvoice, searchEmails, createDraft, draftFromInvoice, verifyGmail
+- [x] Pre-fill Apps Script URL and Sheets ID in Settings (Mimo's known values)
+- [x] Add verify connection button in Sync page (calls verifyGmail action)
+- [x] Dual-mode AI Composer: Gemini via Apps Script + local LLM fallback
+- [x] generateInvoice saves to Google Sheet AND local DB simultaneously
+- [x] Sheets sync imports from INVOICES sheet using Apps Script getInvoices action
+- [x] Proper error messages for deployment access issues (405, auth redirect)
+- [x] AED as default currency throughout (matching Mimo's Config.gs)
+- [x] Service categories from Config.gs shown in Composer as clickable badges

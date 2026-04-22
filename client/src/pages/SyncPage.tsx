@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, Mail, Table2, CheckCircle, XCircle, Clock, AlertTriangle, Zap, Settings } from "lucide-react";
+import { RefreshCw, Mail, Table2, CheckCircle, XCircle, Clock, AlertTriangle, Zap, Settings, ShieldCheck, Wifi } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -111,9 +111,26 @@ export default function SyncPage() {
   const triggerGmail = trpc.sync.triggerGmail.useMutation();
   const triggerSheets = trpc.sync.triggerSheets.useMutation();
   const checkOverdue = trpc.sync.checkOverdue.useMutation();
+  const verifyConnection = trpc.sync.verify.useMutation();
   const utils = trpc.useUtils();
 
   const hasAppsScript = !!settings.data?.appsScriptUrl;
+
+  const handleVerify = async () => {
+    try {
+      toast.loading("Verifying Apps Script connection...", { id: "verify" });
+      const result = await verifyConnection.mutateAsync();
+      toast.dismiss("verify");
+      if (result.success) {
+        toast.success(`Connected as ${result.userEmail ?? "unknown"}`);
+      } else {
+        toast.error(result.error ?? "Connection failed");
+      }
+    } catch (err: any) {
+      toast.dismiss("verify");
+      toast.error(err?.message ?? "Verification failed");
+    }
+  };
 
   const handleGmailSync = async () => {
     try {
@@ -178,6 +195,35 @@ export default function SyncPage() {
           </Button>
         </Link>
       </div>
+
+      {/* Verify connection button when configured */}
+      {hasAppsScript && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-5"
+        >
+          <div className="flex items-center gap-3">
+            <Wifi className="w-4 h-4 text-emerald-400" />
+            <div>
+              <p className="text-sm font-medium text-emerald-400">Apps Script Connected</p>
+              <p className="text-xs text-emerald-400/70 mt-0.5 font-mono truncate max-w-[200px]">
+                {settings.data?.appsScriptUrl?.replace("https://script.google.com/macros/s/", "...s/")}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 flex-shrink-0"
+            onClick={handleVerify}
+            disabled={verifyConnection.isPending}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            {verifyConnection.isPending ? "Verifying..." : "Verify"}
+          </Button>
+        </motion.div>
+      )}
 
       {/* Setup notice */}
       {!hasAppsScript && !settings.isLoading && (
