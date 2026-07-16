@@ -99,3 +99,82 @@
 - [x] Fix Sheets ledger: DB insert fails — added safeDate() parser handling "YYYY-MM-DD HH:MM:SS.mmm" format; fixed source enum to "sheets"; safe amount parsing; fallback values for required fields
 - [x] Update Apps Script searchEmails to safely wrap getSnippet() in try/catch — fix provided to user (see result message)
 - [x] Add Gmail sync payload shape test to verify thread fields (id, subject, from, date, snippet) are present — 6 new tests, 25 total passing
+
+
+## Modular Invoice System (Phase 3 — Future-Proof Architecture)
+
+### Data Model & Storage
+- [ ] Design invoice data model (content separate from style/presentation)
+- [ ] Create invoiceStyles table in database (stores theme, colors, layout per invoice)
+- [ ] Create bankAccounts table with all 7 accounts from spec (Emirates NBD, Kapital USD, Kapital AZN, Payoneer USD, Payoneer GBP, Payoneer EUR, PayPal)
+- [ ] Create themePresets table with 4 themes × 2 modes (luxury, minimal, corporate, creative + dark/light = 8 variants)
+- [ ] Create invoiceComponents table for modular sections (header, address, project, table, payment, footer)
+- [ ] Migrate existing invoices to new schema with default style
+
+### Theme Engine
+- [ ] Build theme engine with 8 theme variants (4 themes × 2 modes)
+- [ ] Implement color palette system with CSS variables (primary, secondary, accent, backgrounds, text)
+- [ ] Build typography system (serif/sans-serif/monospace options)
+- [ ] Create layout presets (spacing, widths, shadows, corners)
+- [ ] Store default style for each invoice
+- [ ] Implement theme switching (user can change theme, colors persist)
+
+### Premium Luxury Invoice Template
+- [ ] Build Header Controls section (print button, close button, edit button)
+- [ ] Build Top Header (logo left, invoice title/status/date/number right)
+- [ ] Build Accent Divider (gradient line with dark green to gold)
+- [ ] Build Address Information section (From / Bill To columns)
+- [ ] Build Project Information section (project, end client, venue, period, role, category)
+- [ ] Build Invoice Details Table (description, qty, rate, amount with zebra striping)
+- [ ] Build Payment & Totals section (bank details + signature block)
+- [ ] Build Footer (legal notices, UAE PASS, copyright)
+- [ ] Implement print optimization (hide controls, full page, proper margins)
+- [ ] Responsive design (mobile + desktop)
+
+### Invoice Editor UI
+- [ ] Build invoice editor page with split view (editor panel + live preview)
+- [ ] Add field edit controls (text inputs, number inputs, select dropdowns, date pickers)
+- [ ] Implement drag-drop section reordering
+- [ ] Add section visibility toggles (show/hide each component)
+- [ ] Build live preview that updates in real-time as user edits
+- [ ] Add undo/redo functionality
+- [ ] Implement section duplication (for line items)
+- [ ] Add section resize controls (width, height)
+
+### Theme Switcher & AI Redesign
+- [ ] Build theme selector dropdown (8 theme options)
+- [ ] Add color picker for custom theme creation
+- [ ] Build AI redesign prompt input (natural language commands)
+- [ ] Implement redesign router (calls LLM to parse commands like "make luxury", "convert to minimal")
+- [ ] Add redesign commands: "make more luxury", "convert to Apple-style minimal", "make corporate", "change to black and gold", "simplify payment section", "convert to bilingual Arabic-English", "optimize for mobile", "generate modern executive version"
+- [ ] Build redesign confirmation UI (preview before applying)
+- [ ] Add preset redesign templates
+
+### Export, Print & Integration
+- [ ] Implement print-to-PDF (browser print + server-side PDF generation option)
+- [ ] Add download as PDF button
+- [ ] Add email invoice button (integration with createDraft)
+- [ ] Implement invoice versioning (store style history)
+- [ ] Add rollback to previous style version
+- [ ] Integrate with Apps Script (save invoice + style to Sheets)
+- [ ] Add invoice preview in dashboard
+- [ ] Implement backward compatibility (load old invoices with default style)
+
+### Advanced Features (Future-Ready)
+- [ ] Add QR code generation (payment QR, invoice link QR)
+- [ ] Add stamp/seal placement editor
+- [ ] Add attachment support (PDFs, images)
+- [ ] Add multilingual support (Arabic-English bilingual invoices)
+- [ ] Add dynamic payment gateway integration
+- [ ] Add downloadable PDF theme templates
+- [ ] Add batch invoice generation
+
+### Testing & Polish
+- [ ] Write vitest tests for theme engine
+- [ ] Write tests for invoice editor mutations
+- [ ] Write tests for AI redesign router
+- [ ] Test print output on different browsers
+- [ ] Test mobile responsiveness
+- [ ] Test backward compatibility with old invoices
+- [ ] Performance optimization (lazy load sections)
+- [ ] Final polish and delivery
