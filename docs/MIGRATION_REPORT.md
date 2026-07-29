@@ -90,7 +90,17 @@ archiving rather than removing (per "archive repos must not be deleted").
    to a real, hardcoded Google Sheet ID if no Script Property was set. Changed
    to throw an error requiring explicit configuration. Applied to both the
    archived repo (commit `2fca93d`) and the migrated copy in `apps-script/`.
-3. **No authentication on the Apps Script Web App**: `appsscript.json` sets
+3. **Hardcoded secret in the active repo's client bundle**: found during the
+   final pre-lock audit, not the original migration pass —
+   `client/src/pages/SettingsPage.tsx` hardcoded the same real Apps Script URL
+   and Sheet ID as default pre-fill values, which shipped into the built
+   client JS bundle of the currently-active app (verified present in
+   `dist/public/assets/*.js` before the fix, confirmed absent after). This was
+   a more severe exposure than the archived-repo instance, since it was live
+   in the production bundle rather than only in git history. Fixed by
+   defaulting to empty strings; the Settings page no longer pre-fills these
+   values, and the Sheet ID field's placeholder no longer shows the real ID.
+4. **No authentication on the Apps Script Web App**: `appsscript.json` sets
    `"access": "ANYONE_ANONYMOUS"`, and `Code.gs`'s `doPost`/`apiHandler` performs
    no auth check before dispatching to Gmail/Sheets/AI actions — despite
    `DIAGNOSTICS.md` (in the archived repo) claiming an API key check exists.

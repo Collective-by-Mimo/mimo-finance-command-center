@@ -14,19 +14,15 @@ export default function SettingsPage() {
   const updateSettings = trpc.settings.update.useMutation();
   const utils = trpc.useUtils();
 
-  // Pre-fill with Mimo's known Apps Script URL and Sheets ID
-  const MIMO_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJPhWh7EPf1Ev7E3yC2-FCE_44fKg0IFKs2WZuawZDz43XtXuRwr92McPN63hk8y1v/exec";
-  const MIMO_SHEETS_ID = "1h3zdDE6BJOEyaQTh92gM82tr03t9AgjY6-vrh06U3wI";
-
-  const [appsScriptUrl, setAppsScriptUrl] = useState(MIMO_APPS_SCRIPT_URL);
-  const [sheetsId, setSheetsId] = useState(MIMO_SHEETS_ID);
+  const [appsScriptUrl, setAppsScriptUrl] = useState("");
+  const [sheetsId, setSheetsId] = useState("");
   const [defaultCurrency, setDefaultCurrency] = useState("AED");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (settings.data) {
-      setAppsScriptUrl(settings.data.appsScriptUrl ?? MIMO_APPS_SCRIPT_URL);
-      setSheetsId(settings.data.sheetsId ?? MIMO_SHEETS_ID);
+      setAppsScriptUrl(settings.data.appsScriptUrl ?? "");
+      setSheetsId(settings.data.sheetsId ?? "");
       setDefaultCurrency(settings.data.defaultCurrency ?? "AED");
     }
   }, [settings.data]);
@@ -138,7 +134,7 @@ export default function SettingsPage() {
             <Input
               value={sheetsId}
               onChange={(e) => setSheetsId(e.target.value)}
-              placeholder="1h3zdDE6BJOEyaQTh92gM82tr03t9AgjY6-vrh06U3wI"
+              placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
               className="bg-secondary/50 border-border/50 text-sm font-mono"
             />
             <p className="text-xs text-muted-foreground/60 mt-1">
