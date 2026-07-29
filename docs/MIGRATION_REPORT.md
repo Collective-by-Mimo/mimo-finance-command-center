@@ -135,10 +135,10 @@ not a leftover duplication.
   history (including the pre-redaction secret) remains intact on GitHub.
   If that's unacceptable, that needs a separate, explicitly-approved history
   rewrite + force-push.
-- **Build not yet re-verified after this migration** — the Apps Script files
-  don't affect the Node build (they're plain files, not part of the
-  TypeScript project), but see the summary in this session for whatever
-  verification was actually run.
+- **Build verified.** `pnpm install`, `tsc --noEmit` (0 errors), `vitest`
+  (25/25 passing), and `vite build` all succeed as of the final pre-push
+  check on 2026-07-29. The Apps Script files don't affect the Node build —
+  they're plain files, not part of the TypeScript project.
 - **GitHub-level "archived" status not set.** `ARCHIVED.md` marks intent in
   both archive repos, but the actual GitHub "Archive this repository"
   read-only toggle (Settings → General → Danger Zone) was not flipped — no
