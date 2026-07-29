@@ -46,6 +46,7 @@ Settings page at a live deployment again:
 | File | Purpose |
 |---|---|
 | `Code.gs` | Entry point (`doGet`/`doPost`) and the `apiHandler` action router |
+| `Index.html` | Placeholder page `doGet()` serves for browser (non-API) visits to the deployment URL |
 | `Config.gs` | Script properties access (API key, spreadsheet ID), operator/business info used on invoices |
 | `Constants.gs` | Shared constants |
 | `Schema.gs` | Spreadsheet ledger schema setup |

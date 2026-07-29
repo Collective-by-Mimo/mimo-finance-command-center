@@ -8,7 +8,7 @@ Date: 2026-07-29
 |---|---|---|---|
 | `mimo-finance-command` | React + tRPC/Express + Drizzle ORM (Postgres) | 5 | Clean, up to date with origin |
 | `mimo-finance-command-center` | Same stack, later state | 6 | Clean, up to date with origin |
-| `Mimo-s-Finance-Command-Center` | Google AI Studio prototype: React/Firebase frontend + Google Apps Script backend | 2 | 1 unrelated uncommitted change (`Index.html`), left untouched |
+| `Mimo-s-Finance-Command-Center` | Google AI Studio prototype: React/Firebase frontend + Google Apps Script backend | 2 original + follow-up commits (redaction, archive marking) | Clean except a structural case-collision artifact (see below), left untouched |
 
 Key finding: `mimo-finance-command`'s HEAD (`acf2c42`) is a direct git ancestor of
 `mimo-finance-command-center`'s HEAD — verified with
@@ -26,6 +26,14 @@ client/server side, confirming this Apps Script code is the live backend that
 repo's Gmail scanner and Sheets sync depend on — not a competing/superseded
 implementation.
 
+`Mimo-s-Finance-Command-Center` also tracks two paths that differ only by case
+— `Index.html` (the Apps Script `doGet()` bridge page) and `index.html` (the
+Vite app's real entry point). Windows' filesystem is case-insensitive, so both
+map to one physical file; whichever blob was checked out last shadows the
+other and git perpetually reports one of the two as locally modified. This
+predates the migration, is not fixable without restructuring that repo's
+tracked paths, and does not affect this repo — noted here for the record.
+
 ## 2. Final repository selected
 
 **`mimo-finance-command-center`** (this repo) — most mature architecture
@@ -38,7 +46,10 @@ consolidation target per its prior README.
 From `Mimo-s-Finance-Command-Center` into `apps-script/` in this repo:
 - `Code.gs`, `Config.gs`, `Constants.gs`, `DashboardService.gs`,
   `GmailService.gs`, `InvoiceService.gs`, `Repository.gs`, `Schema.gs`,
-  `AiService.gs`, `appsscript.json`
+  `AiService.gs`, `appsscript.json`, `Index.html` (the `doGet()` bridge page —
+  originally missed in the first migration pass, added after verification
+  caught that `Code.gs` references it via `createTemplateFromFile('Index')`
+  with no matching file in `apps-script/`)
 
 This is the Google Apps Script Web App that this app's Settings-configured
 `APPS_SCRIPT_URL` calls for Gmail search/draft creation and Sheets ledger
