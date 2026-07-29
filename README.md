@@ -14,7 +14,7 @@ Personal finance and invoicing command center for Movsum (Mimo) Mirzazada: scan 
 
 ## Stack
 
-React client (`client/`) + tRPC/Express server (`server/`) + Drizzle ORM (`drizzle/`, PostgreSQL). S3-compatible storage for uploads. pnpm workspace with a patched wouter router.
+React client (`client/`) + tRPC/Express server (`server/`) + Drizzle ORM (`drizzle/`, PostgreSQL). S3-compatible storage for uploads. pnpm workspace with a patched wouter router. The Gmail/Sheets bridge is a separate Google Apps Script Web App (`apps-script/`), deployed independently to script.google.com.
 
 ## Run it
 
@@ -29,4 +29,9 @@ Copy `.env.example` to `.env` and fill in the values (see comments). The Gmail/S
 
 ## History
 
-Consolidated July 2026 from the org repo `mimo-finance-command` (base — all 131 apparent local differences were line-endings only) plus the longer local `todo.md` roadmap. The older Apps Script/Firebase variant (`Mimo-s-Finance-Command-Center`) was not merged; it is superseded by this app.
+This is the authoritative Finance Command Center repo. Two other repos are archived (kept for history, not deleted, not active):
+
+- [`mimo-finance-command`](https://github.com/Collective-by-Mimo/mimo-finance-command) — the base this repo was consolidated from in July 2026 (all local differences were line-endings only, plus a longer `todo.md`). Fully absorbed; its full commit history is an ancestor of this repo's.
+- [`Mimo-s-Finance-Command-Center`](https://github.com/Collective-by-Mimo/Mimo-s-Finance-Command-Center) — the original Google AI Studio prototype. Its React/Firebase frontend is superseded by this repo's `client/`, but its **Apps Script backend was migrated here** (`apps-script/`) — it's the live code behind the Gmail scanner and Sheets sync, not dead weight.
+
+See `docs/MIGRATION_REPORT.md` for the full consolidation record, including a security fix applied during migration (a previously-exposed Apps Script deployment URL).
